@@ -24,7 +24,7 @@ class CalorieTracker {
     this._render();
   }
 
-  addworkout(workout) {
+  addWorkout(workout) {
     this._workouts.push(workout);
     //account for calories in workout -- total calories = total calories minus workout calories
     this._totalCalories -= workout.calories;
@@ -125,17 +125,50 @@ class Workout {
   }
 }
 
-const tracker = new CalorieTracker();
+// App class to handle events
 
-//create new meal & workout
-const breakfast = new Meal('Breakfast', 400);
-const lunch = new Meal('Lunch', 350);
-tracker.addMeal(breakfast);
-tracker.addMeal(lunch);
+class App {
+  constructor() {
+    /*set tracker to property in constructor, now we can access public methods. 
+    event listners will go in to the constructor as well */
+    this._tracker = new CalorieTracker();
+    document
+      .getElementById('meal-form')
+      .addEventListener('submit', this._newItem.bind(this, 'meal'));
+    document
+      .getElementById('workout-form')
+      .addEventListener('submit', this._newItem.bind(this, 'workout'));
+  }
+  _newItem(type, e) {
+    e.preventDefault();
+    //get input fields
+    const name = document.getElementById(`${type}-name`);
+    const calories = document.getElementById(`${type}-calories`);
 
-const run = new Workout('Morning Run', 300);
+    //Validate inputs and make sure they're there
+    if (name.value === '' || calories.value === '') {
+      alert(`Please complete all fields`);
+      return;
+    }
 
-tracker.addworkout(run);
-console.log(tracker._meals);
-console.log(tracker._meals);
-console.log(tracker._totalCalories);
+    //Create a new meal or a new workout
+    if (type === 'meal') {
+      //+ on +calories turns string into a number
+      const meal = new Meal(name.value, +calories.value);
+      this._tracker.addMeal(meal);
+    } else {
+      const workout = new Workout(name.value, +calories.value);
+      this._tracker.addWorkout(workout);
+    }
+
+    //clear form
+    name.value = '';
+    calories.value = '';
+
+    const collapseItem = document.getElementById(`collapse-${type}`);
+    const bsCollapse = new bootstrap.Collapse(collapseItem, { toggle: true });
+  }
+}
+
+//Runs the app
+const app = new App();
