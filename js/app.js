@@ -20,6 +20,8 @@ class CalorieTracker {
 
     //account for calories in meal obj-- total calories = total calories plus meal calories
     this._totalCalories += meal.calories;
+    this._displayNewMeal(meal);
+
     //render everytime you add a meal
     this._render();
   }
@@ -28,8 +30,33 @@ class CalorieTracker {
     this._workouts.push(workout);
     //account for calories in workout -- total calories = total calories minus workout calories
     this._totalCalories -= workout.calories;
+    this._displayNewWorkout(workout);
+
     //render everytime you add a workout
     this._render();
+  }
+
+  removeMeal(id) {
+    //find index of the meal we want to remove w/findIndex--for each meal; where the meal.id === the id thats passed in
+    const index = this._meals.findIndex((meal) => meal.id === id);
+    //check to make sure its a match- w/findIndex if no math will return -1
+    if (index !== -1) {
+      const meal = this._meals[index];
+      this._totalCalories -= meal.calories;
+      this._meals.splice(index, 1);
+      this._render();
+    }
+  }
+  removeWorkout(id) {
+    //find index of workout we want to remove w/findIndex--for each meal; where the meal.id === the id thats passed in
+    const index = this._workouts.findIndex((workout) => workout.id === id);
+    //check to make sure its a match- w/findIndex if no math will return -1
+    if (index !== -1) {
+      const workout = this._workouts[index];
+      this._totalCalories += workout.calories;
+      this._workouts.splice(index, 1);
+      this._render();
+    }
   }
 
   //Private Methods
@@ -101,6 +128,59 @@ class CalorieTracker {
     progressElement.style.width = `${width}%`;
   }
 
+  _displayNewMeal(meal) {
+    const mealsElement = document.getElementById('meal-items');
+    //create div
+    const mealElement = document.createElement('div');
+    //add 2 classes
+    mealElement.classList.add('card', 'my-2');
+    mealElement.setAttribute('data-id', meal.id);
+    mealElement.innerHTML = `
+<div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                  <h4 class="mx-1">${meal.name}</h4>
+                  <div
+                    class="fs-1 bg-primary text-white text-center rounded-2 px-2 px-sm-5"
+                  >
+                    ${meal.calories}
+                  </div>
+                  <button class="delete btn btn-danger btn-sm mx-2">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+              </div>
+`;
+
+    //add to DOM
+    mealsElement.appendChild(mealElement);
+  }
+  _displayNewWorkout(workout) {
+    const workoutsElement = document.getElementById('workout-items');
+    //create div
+    const workoutElement = document.createElement('div');
+    //add 2 classes
+    workoutElement.classList.add('card', 'my-2');
+    workoutElement.setAttribute('data-id', workout.id);
+    workoutElement.innerHTML = `
+<div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                  <h4 class="mx-1">${workout.name}</h4>
+                  <div
+                    class="fs-1 bg-secondary text-white text-center rounded-2 px-2 px-sm-5"
+                  >
+                    ${workout.calories}
+                  </div>
+                  <button class="delete btn btn-danger btn-sm mx-2">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+              </div>
+`;
+
+    //add to DOM
+    workoutsElement.appendChild(workoutElement);
+  }
+
   _render() {
     this._displayCaloriesTotal();
     this._displayCaloriesConsumed();
@@ -138,6 +218,15 @@ class App {
     document
       .getElementById('workout-form')
       .addEventListener('submit', this._newItem.bind(this, 'workout'));
+
+    //use event delegation to target meal-items the parent class of all the items. When we click we call
+    //remove items-- need this keyword to be the actual object, so we bind and pass in this & type
+    document
+      .getElementById('meal-items')
+      .addEventListener('click', this._removeItem.bind(this, 'meal'));
+    document
+      .getElementById('workout-items')
+      .addEventListener('click', this._removeItem.bind(this, 'workout'));
   }
   _newItem(type, e) {
     e.preventDefault();
@@ -167,6 +256,23 @@ class App {
 
     const collapseItem = document.getElementById(`collapse-${type}`);
     const bsCollapse = new bootstrap.Collapse(collapseItem, { toggle: true });
+  }
+  _removeItem(type, e) {
+    //target the button
+    if (
+      e.target.classList.contains('delete') ||
+      e.target.classList.contains('fa-xmark')
+    ) {
+      if (confirm('Are you sure?')) {
+        //get id of "item"
+        const id = e.target.closest('.card').getAttribute('data-id');
+        type === 'meal'
+          ? this._tracker.removeMeal(id)
+          : this._tracker.removeWorkout(id);
+
+        const item = e.target.closest('.card').remove();
+      }
+    }
   }
 }
 
