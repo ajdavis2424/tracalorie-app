@@ -1,9 +1,9 @@
 class CalorieTracker {
   constructor() {
-    this._calorieLimit = 2000;
-    this._totalCalories = 0;
-    this._meals = [];
-    this._workouts = [];
+    this._calorieLimit = Storage.getCalorieLimit();
+    this._totalCalories = Storage.getTotalCalories(0);
+    this._meals = Storage.getMeals();
+    this._workouts = Storage.getWorkouts();
 
     //Constructor runs immediately when you instantiate the class, so display calories etc
     this._displayCaloriesLimit();
@@ -12,6 +12,8 @@ class CalorieTracker {
     this._displayCaloriesBurned();
     this._displayCaloriesRemaining();
     this._displayCaloriesProgress();
+
+    document.getElementById('limit').value = this._calorieLimit;
   }
   //Public Methods/API
   addMeal(meal) {
@@ -20,6 +22,9 @@ class CalorieTracker {
 
     //account for calories in meal obj-- total calories = total calories plus meal calories
     this._totalCalories += meal.calories;
+    Storage.updateTotalCalories(this._totalCalories);
+    //add to local storage
+    Storage.saveMeal(meal);
     this._displayNewMeal(meal);
 
     //render everytime you add a meal
@@ -30,6 +35,8 @@ class CalorieTracker {
     this._workouts.push(workout);
     //account for calories in workout -- total calories = total calories minus workout calories
     this._totalCalories -= workout.calories;
+    Storage.updateTotalCalories(this._totalCalories);
+    Storage.saveWorkout(workout);
     this._displayNewWorkout(workout);
 
     //render everytime you add a workout
@@ -43,7 +50,9 @@ class CalorieTracker {
     if (index !== -1) {
       const meal = this._meals[index];
       this._totalCalories -= meal.calories;
+      Storage.updateTotalCalories(this._totalCalories);
       this._meals.splice(index, 1);
+      Storage.removeMeal(id);
       this._render();
     }
   }
@@ -54,7 +63,9 @@ class CalorieTracker {
     if (index !== -1) {
       const workout = this._workouts[index];
       this._totalCalories += workout.calories;
+      Storage.updateTotalCalories(this._totalCalories);
       this._workouts.splice(index, 1);
+      Storage.removeWorkout(id);
       this._render();
     }
   }
@@ -64,14 +75,21 @@ class CalorieTracker {
     this._totalCalories = 0;
     this._meals = [];
     this._workouts = [];
+    Storage.clearAll();
     this._render();
   }
 
   setLimit(calorieLimit) {
     this._calorieLimit = calorieLimit;
     //display calorie limit
+    Storage.setCalorieLimit(calorieLimit);
     this._displayCaloriesLimit();
     this._render();
+  }
+
+  loadItems() {
+    this._meals.forEach((meal) => this._displayNewMeal(meal));
+    this._workouts.forEach((workout) => this._displayNewWorkout(workout));
   }
 
   //Private Methods
@@ -88,6 +106,7 @@ class CalorieTracker {
     const caloriesConsumedElement =
       document.getElementById('calories-consumed');
     //take all calories in our consumed array to get 1 value
+
     const consumed = this._meals.reduce(
       (total, meal) => total + meal.calories,
       0
@@ -220,13 +239,131 @@ class Workout {
   }
 }
 
-// App class to handle events
+//Storage Class-- methods will be static bc we don't need multiple instance... just 1 entity
+class Storage {
+  static getCalorieLimit(defaultLimit = 2000) {
+    let calorieLimit;
+    if (localStorage.getItem('calorie-limit') === null) {
+      calorieLimit = defaultLimit;
+    } else {
+      calorieLimit = +localStorage.getItem('calorie-limit');
+    }
+    return calorieLimit;
+  }
+  static setCalorieLimit(calorieLimit) {
+    localStorage.setItem('calorieLimit', calorieLimit);
+  }
 
+  static getTotalCalories(defaultCalories = 0) {
+    let totalCalories;
+    if (localStorage.getItem('totalCalories') === null) {
+      totalCalories = defaultCalories;
+    } else {
+      totalCalories = +localStorage.getItem('totalCalories');
+    }
+    return totalCalories;
+  }
+
+  static updateTotalCalories(calories) {
+    localStorage.setItem('totalCalories', calories);
+  }
+
+  static getMeals() {
+    let meals;
+    if (localStorage.getItem('meals') === null) {
+      meals = [];
+    } else {
+      meals = JSON.parse(localStorage.getItem('meals'));
+    }
+    return meals;
+  }
+
+  static saveMeal(meal) {
+    const meals = Storage.getMeals();
+    //Push to array then put into lacal storage
+    meals.push(meal);
+    localStorage.setItem('meals', JSON.stringify(meals));
+  }
+  static removeMeal(id) {
+    const meals = Storage.getMeals();
+    meals.forEach((meal, index) => {
+      if (meal.id === id) {
+        meals.splice(index, 1);
+      }
+    });
+
+    localStorage.setItem('meals', JSON.stringify(meals));
+  }
+  static removeMeal(id) {
+    //get meal from local storage
+    const meals = Storage.getMeals();
+    meals.forEach((meal, index) => {
+      if (meal.id === id) {
+        meals.splice(index, 1);
+      }
+    });
+    localStorage.setItem('meals', JSON.stringify(meals));
+  }
+
+  static getWorkouts() {
+    let workouts;
+    if (localStorage.getItem('workouts') === null) {
+      workouts = [];
+    } else {
+      workouts = JSON.parse(localStorage.getItem('workouts'));
+    }
+    return workouts;
+  }
+
+  static saveWorkout(workout) {
+    const workouts = Storage.getWorkouts();
+    workouts.push(workout);
+    localStorage.setItem('workouts', JSON.stringify(workouts));
+  }
+
+  static removeWorkout(id) {
+    //get meal from local storage
+    const workouts = Storage.getWorkouts();
+    workouts.forEach((meal, index) => {
+      if (meal.id === id) {
+        workouts.splice(index, 1);
+      }
+    });
+    localStorage.setItem('workouts', JSON.stringify(workouts));
+  }
+
+  static removeWorkout(id) {
+    const workouts = Storage.getWorkouts();
+    workouts.forEach((workout, index) => {
+      if (workout.id === id) {
+        workouts.splice(index, 1);
+      }
+    });
+
+    localStorage.setItem('workouts', JSON.stringify(workouts));
+  }
+
+  static clearAll() {
+    localStorage.removeItem('totalCalories');
+    localStorage.removeItem('meals');
+    localStorage.removeItem('workouts');
+
+    // If you want to clear the limit
+    // localStorage.clear();
+  }
+}
+
+// App Class to handle events
 class App {
   constructor() {
     /*set tracker to property in constructor, now we can access public methods. 
     event listners will go in to the constructor as well */
     this._tracker = new CalorieTracker();
+    this._loadEventListners();
+    this._tracker.loadItems();
+  }
+
+  _loadEventListners() {
     document
       .getElementById('meal-form')
       .addEventListener('submit', this._newItem.bind(this, 'meal'));
@@ -260,6 +397,7 @@ class App {
       .getElementById('limit-form')
       .addEventListener('submit', this._setLimit.bind(this));
   }
+
   _newItem(type, e) {
     e.preventDefault();
     //get input fields
